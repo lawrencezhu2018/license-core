@@ -16,9 +16,10 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalUnit;
 import java.util.Map;
 import java.util.Objects;
@@ -57,13 +58,13 @@ public final class LicenseUtils {
       String ip,
       long expirationAmount,
       TemporalUnit expirationUnit,
-      Path licensePath)
+      String licensePath)
       throws Exception {
     Product product =
         generate(application, user, project, mac, ip, expirationAmount, expirationUnit);
     Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
-    try (FileWriter writer = new FileWriter(licensePath.toString(), StandardCharsets.UTF_8)) {
+    try (FileWriter writer = new FileWriter(licensePath, StandardCharsets.UTF_8)) {
       gson.toJson(product.getLicense(), writer);
     }
 
@@ -82,7 +83,8 @@ public final class LicenseUtils {
    * @param expirationUnit 有效期的单位
    * @return {@link Product}
    * @throws Exception 异常
-   */public static Product generate(
+   */
+  public static Product generate(
       String application,
       String user,
       String project,
@@ -97,10 +99,13 @@ public final class LicenseUtils {
     license.setProject(project);
     license.setMac(mac);
     license.setIp(ip);
-    license.setGenerated(LocalDateTime.now().toString());
+    license.setGenerated(ZonedDateTime.now().format(DateTimeFormatter.ISO_ZONED_DATE_TIME));
     license.setExpiration(
-        LocalDateTime.now().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-            + Duration.of(expirationAmount, expirationUnit).toMillis());
+        LocalDateTime.now()
+            .plus(expirationAmount, expirationUnit)
+            .atZone(ZoneId.systemDefault())
+            .toInstant()
+            .toEpochMilli());
 
     Map<String, Object> keyMap = RSAUtils.genKeyPair();
     String publicKey = RSAUtils.getPublicKey(keyMap);
@@ -118,7 +123,7 @@ public final class LicenseUtils {
    * 验证license文件
    *
    * @param licensePath license文件路径
-   * @param currentTimestamp 当前时间戳 可选，若不填则使用本机时间验证
+   * @param currentTimestamp 当前时间戳 可选
    * @return boolean
    * @throws IOException ioexception
    */
@@ -131,11 +136,14 @@ public final class LicenseUtils {
     log.info("license info:{}", gson.toJson(license));
 
     try {
-      return RSAUtils.verify(message.getBytes(StandardCharsets.UTF_8), license.getPublicKey(), license.getSignature())
+      return RSAUtils.verify(
+              message.getBytes(StandardCharsets.UTF_8),
+              license.getPublicKey(),
+              license.getSignature())
           && Objects.equals(MachineUtils.getIpAddress(), license.getIp())
           && MachineUtils.getMacAddresses().contains(license.getMac())
           && license.getExpiration()
-              > Optional.of(currentTimestamp).orElse(System.currentTimeMillis());
+              > Optional.ofNullable(currentTimestamp).orElse(CommonUtils.getCurrentTimestamp());
 
     } catch (Exception e) {
       log.error("fail to verify license", e);

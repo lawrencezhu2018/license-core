@@ -3,10 +3,11 @@ package com.gothesun.licensecore.utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.*;
-import java.util.Enumeration;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 /**
  * @author lawrence zhu
@@ -14,6 +15,14 @@ import java.util.Set;
  */
 public final class MachineUtils {
   private static final Logger log = LoggerFactory.getLogger(MachineUtils.class);
+
+  private static final List<String> DESTINATION_LIST =
+      Arrays.asList(
+          "http://icanhazip.com",
+          "http://checkip.amazonaws.com",
+          "http://api.ipify.org",
+          "http://ident.me",
+          "http://bot.whatismyipaddress.com");
 
   private MachineUtils() {}
 
@@ -41,11 +50,22 @@ public final class MachineUtils {
   }
 
   protected static String getIpAddress() {
+    for (String destination : DESTINATION_LIST) {
+      try {
+        URL url = new URL(destination);
+        BufferedReader in = new BufferedReader(new InputStreamReader(url.openStream()));
+
+        return in.readLine();
+      } catch (IOException e) {
+        log.warn("fail to connect {}", destination);
+      }
+    }
+
     try (final DatagramSocket socket = new DatagramSocket()) {
       socket.connect(InetAddress.getByName("8.8.8.8"), 10002);
       return socket.getLocalAddress().getHostAddress();
     } catch (SocketException | UnknownHostException e) {
-      log.error("fail to get ip address", e);
+      log.warn("fail to connect 8.8.8.8");
     }
 
     return "";

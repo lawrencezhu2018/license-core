@@ -163,9 +163,10 @@ public final class LicenseUtils {
     Gson gson = new Gson();
     License license =
         gson.fromJson(Files.newBufferedReader(licensePath, StandardCharsets.UTF_8), License.class);
-    String message = getMessage(license);
-
+    Preconditions.checkArgument(Objects.nonNull(license), tip,"license file");
     log.info("license info:{}", gson.toJson(license));
+
+    String message = getMessage(license);
 
     try {
       return RSAUtils.verify(

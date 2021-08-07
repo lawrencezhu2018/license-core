@@ -11,7 +11,6 @@ import java.io.IOException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.file.Path;
-import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.Set;
@@ -21,7 +20,8 @@ import java.util.Set;
  * @date 2021-08-04
  */
 class LicenseUtilsTest {
-  private static final String LICENSE_PATH="D:\\data\\code\\gothesun\\sdk\\license-core\\src\\test\\resources\\license.json";
+  private static final String LICENSE_PATH =
+      "D:\\data\\code\\gothesun\\sdk\\license-core\\src\\test\\resources\\license.json";
 
   @Test
   void generate() throws Exception {
@@ -29,14 +29,15 @@ class LicenseUtilsTest {
     System.out.println(macs);
     String privateKey =
         LicenseUtils.generate(
+            "gothesun.com",
             "letterlab",
             "license@gothesun.com",
             "license-core",
-            "70-F1-1C-11-58-A9",
+            "70-F1-1C-11-58-A",
             MachineUtils.getIpAddress(),
             1,
-            ChronoUnit.YEARS,LICENSE_PATH
-            );
+            ChronoUnit.YEARS,
+            LICENSE_PATH);
     System.out.println(privateKey);
   }
 
@@ -50,10 +51,6 @@ class LicenseUtilsTest {
 
   @Test
   void verify() throws IOException {
-    Assertions.assertTrue(
-            LicenseUtils.verify(
-                    Path.of(
-                            LICENSE_PATH),
-                    null));
+    Assertions.assertTrue(LicenseUtils.verify(Path.of(LICENSE_PATH), "gothesun.com","letterla",1L));
   }
 }

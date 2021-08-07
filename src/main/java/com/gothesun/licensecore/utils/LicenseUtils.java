@@ -4,6 +4,9 @@
 
 package com.gothesun.licensecore.utils;
 
+import cn.hutool.core.lang.Validator;
+import cn.hutool.core.util.StrUtil;
+import com.google.common.base.Preconditions;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.gothesun.licensecore.bean.License;
@@ -51,6 +54,7 @@ public final class LicenseUtils {
    * @throws Exception 异常
    */
   public static String generate(
+      String vendor,
       String application,
       String user,
       String project,
@@ -61,7 +65,7 @@ public final class LicenseUtils {
       String licensePath)
       throws Exception {
     Product product =
-        generate(application, user, project, mac, ip, expirationAmount, expirationUnit);
+        generate(vendor, application, user, project, mac, ip, expirationAmount, expirationUnit);
     Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
     try (FileWriter writer = new FileWriter(licensePath, StandardCharsets.UTF_8)) {
@@ -85,6 +89,7 @@ public final class LicenseUtils {
    * @throws Exception 异常
    */
   public static Product generate(
+      String vendor,
       String application,
       String user,
       String project,
@@ -93,8 +98,19 @@ public final class LicenseUtils {
       long expirationAmount,
       TemporalUnit expirationUnit)
       throws Exception {
+    String tip = "%s should not be blank";
+    Preconditions.checkArgument(StrUtil.isNotBlank(vendor), tip, "vendor");
+    Preconditions.checkArgument(StrUtil.isNotBlank(application), tip, "application");
+    Preconditions.checkArgument(StrUtil.isNotBlank(user), tip, "user");
+    Preconditions.checkArgument(StrUtil.isNotBlank(project), tip, "project");
+    Preconditions.checkArgument(Validator.isMac(mac), "[%s] is not valid mac address", mac);
+    Preconditions.checkArgument(
+        Validator.isIpv4(ip) || Validator.isIpv6(ip), "[%s] is not valid ip address", ip);
+
     License license = new License();
+    license.setVendor(vendor);
     license.setApplication(application);
+    license.setSequence(CommonUtils.uuid());
     license.setUser(user);
     license.setProject(project);
     license.setMac(mac);
@@ -123,11 +139,27 @@ public final class LicenseUtils {
    * 验证license文件
    *
    * @param licensePath license文件路径
+   * @param vendor 供应商
+   * @param application 应用
    * @param currentTimestamp 当前时间戳 可选
    * @return boolean
    * @throws IOException ioexception
    */
-  public static boolean verify(Path licensePath, Long currentTimestamp) throws IOException {
+  public static boolean verify(
+      Path licensePath, String vendor, String application, Long currentTimestamp)
+      throws IOException {
+    String tip = "%s should not be blank";
+    Preconditions.checkArgument(
+        Files.isRegularFile(licensePath) && Files.isReadable(licensePath),
+        "[%s] is not a readable license file",
+        licensePath);
+    Preconditions.checkArgument(StrUtil.isNotBlank(vendor), tip, "vendor");
+    Preconditions.checkArgument(StrUtil.isNotBlank(application), tip, "application");
+    Preconditions.checkArgument(
+        Objects.isNull(currentTimestamp) || currentTimestamp > 0,
+        "[%s] is not valid currentTimestamp",
+        currentTimestamp);
+
     Gson gson = new Gson();
     License license =
         gson.fromJson(Files.newBufferedReader(licensePath, StandardCharsets.UTF_8), License.class);
@@ -140,6 +172,8 @@ public final class LicenseUtils {
               message.getBytes(StandardCharsets.UTF_8),
               license.getPublicKey(),
               license.getSignature())
+          && Objects.equals(vendor, license.getVendor())
+          && Objects.equals(application, license.getApplication())
           && Objects.equals(MachineUtils.getIpAddress(), license.getIp())
           && MachineUtils.getMacAddresses().contains(license.getMac())
           && license.getExpiration()
@@ -149,6 +183,20 @@ public final class LicenseUtils {
       log.error("fail to verify license", e);
       return false;
     }
+  }
+
+  /**
+   * 验证license文件
+   *
+   * @param licensePath license文件路径
+   * @param vendor 供应商
+   * @param application 应用
+   * @return boolean 证书是否合法
+   * @throws IOException ioexception
+   */
+  public static boolean verify(Path licensePath, String vendor, String application)
+      throws IOException {
+    return verify(licensePath, vendor, application, null);
   }
 
   private static String getMessage(License license) {

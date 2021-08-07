@@ -19,6 +19,9 @@ import java.util.UUID;
 public final class CommonUtils {
   private static final Logger log = LoggerFactory.getLogger(CommonUtils.class);
 
+  private static final String MAC_REGEX =
+      "^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})|([0-9a-fA-F]{4}\\.[0-9a-fA-F]{4}\\.[0-9a-fA-F]{4})$";
+
   private CommonUtils() {}
 
   /**
@@ -26,7 +29,7 @@ public final class CommonUtils {
    *
    * @return 简化的uuid
    */
-   public static String uuid() {
+  public static String uuid() {
     return UUID.randomUUID().toString().replaceAll("-", "");
   }
 
@@ -40,5 +43,9 @@ public final class CommonUtils {
       log.warn("fail to connect baidu");
       return System.currentTimeMillis();
     }
+  }
+
+  public static boolean isValidMacAddress(String mac) {
+    return mac.matches(MAC_REGEX);
   }
 }

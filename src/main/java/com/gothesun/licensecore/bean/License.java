@@ -4,8 +4,6 @@
 
 package com.gothesun.licensecore.bean;
 
-import com.gothesun.licensecore.utils.CommonUtils;
-
 /**
  * license对象
  *
@@ -13,11 +11,11 @@ import com.gothesun.licensecore.utils.CommonUtils;
  * @date 2021-08-03
  */
 public class License {
-  private String vendor = "gothesun.com";
+  private String vendor;
 
   private String application;
 
-  private String sequence = CommonUtils.uuid();
+  private String sequence;
 
   private String user;
 
